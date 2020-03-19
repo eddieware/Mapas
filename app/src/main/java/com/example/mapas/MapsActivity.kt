@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
+import com.google.android.gms.common.api.GoogleApi
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -28,6 +29,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private val permissionFineLocation=android.Manifest.permission.ACCESS_FINE_LOCATION
     private val permissionCoarseLocation=android.Manifest.permission.ACCESS_COARSE_LOCATION
+    private lateinit var locationCallback: LocationCallback
 
     //Para identificar el permiso asignado a la ubicacion, puede ir cualquier numero
     private val CODIGO_SOLICITUD_PERMISO=100
@@ -49,7 +51,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         fusedLocationClient= FusedLocationProviderClient(this)
         InicializarLocationRequest()
 
-        callback = object : LocationCallback() {
+        locationCallback = object : LocationCallback() {
             override fun onLocationResult(p0: LocationResult?) {
                 super.onLocationResult(p0)
 
@@ -126,7 +128,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     @SuppressLint("MissingPermission")
     private fun obtenerubicacion(){
         //Mnitorea los cambios de ubicacion y los acgtualiza
-        fusedLocationClient?.removeLocationUpdates(locationRequest, callback,null)
+        fusedLocationClient?.removeLocationUpdates(locationRequest, locationCallback,null)
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -152,4 +154,72 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         requestPermissions(arrayOf(permissionFineLocation,permissionCoarseLocation),CODIGO_SOLICITUD_PERMISO)
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        //requestCode almcacena el codigo de la solicitud el cual s eocmpara con mis constamte solicitud permiso y se mapea
+
+        when(requestCode){
+            CODIGO_SOLICITUD_PERMISO->{
+                //grantResults es una arreglo donde viene el resultado en la primera posicion
+                //si tiene algo en la primera posicion y admeas es igual al permiso requerido
+                //para la ubicacion entonves se obtiene ubicacion si no se envia  un mensaje de que no se dieron permisos
+                if(grantResults.size>0 &&grantResults[0]== PackageManager.PERMISSION_GRANTED){
+                    //si se concedio el permiso conceder ubicacion
+                    obtenerubicacion()
+                }else {
+                    Toast.makeText(this,"No diste pErmiso para acceder a la ubicacion", Toast.LENGTH_LONG).show()
+
+                    }
+                }
+            }
+
+        fun inicializarLocationRequest(){
+
+        }
+        fun deteneractualizacionubicacion(){
+
+            fusedLocationClient?.removeLocationUpdates(locationCallback)
+        }
+
+
+
+        }
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    override fun onStart() {
+        super.onStart()
+
+        //se validan permisos de ubicacion si se tienen se inicia el metodo obtner
+        if(ValidarPermisosUbicacion()){
+            obtenerubicacion()
+        }else{
+            pedirPermisos()
+        }
+
+    }
+
+    override fun onPause() {
+        super.onPause()
+        deteneractualizacionubicacion()
+    }
+
+    private fun deteneractualizacionubicacion() {
+        fusedLocationClient?.removeLocationUpdates(locationCallback)
+    }
+
+
 }
+
+private fun FusedLocationProviderClient?.removeLocationUpdates(locationRequest: LocationRequest?, locationCallback: LocationCallback, nothing: Nothing?) {
+
+}
+
+
+
+
+
+
