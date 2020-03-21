@@ -1,16 +1,13 @@
 package com.example.mapas
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.pm.PackageManager
-import android.location.Location
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
-import com.google.android.gms.common.api.GoogleApi
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -29,14 +26,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private val permissionFineLocation=android.Manifest.permission.ACCESS_FINE_LOCATION
     private val permissionCoarseLocation=android.Manifest.permission.ACCESS_COARSE_LOCATION
-    private lateinit var locationCallback: LocationCallback
-
     //Para identificar el permiso asignado a la ubicacion, puede ir cualquier numero
     private val CODIGO_SOLICITUD_PERMISO=100
 
     //variable para obtener latitud y longitud
-    var fusedLocationClient: FusedLocationProviderClient?=null
+    //var fusedLocationClient: FusedLocationProviderClient?=null
+    var fusedLocationClient : FusedLocationProviderClient? = null
     var locationRequest: LocationRequest?=null
+    private var callback : LocationCallback? = null
     private lateinit var mMap: GoogleMap
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,9 +46,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         //inicializamos la variable
         fusedLocationClient= FusedLocationProviderClient(this)
-        InicializarLocationRequest()
+        solLocationRequest()
 
-        locationCallback = object : LocationCallback() {
+        callback = object : LocationCallback() {
+
             override fun onLocationResult(p0: LocationResult?) {
                 super.onLocationResult(p0)
 
@@ -62,25 +60,22 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
                     for (ubicacion in p0?.locations!!) {
                         //envia mensaje con la latitud y longitud
-                        Toast.makeText(
-                            applicationContext,
-                            ubicacion.latitude.toString() + " , " + ubicacion.longitude.toString(),
-                            Toast.LENGTH_LONG
+                        Toast.makeText(applicationContext, ubicacion.latitude.toString() + " , " + ubicacion.longitude.toString(), Toast.LENGTH_LONG
                         ).show()
 
-                        val miposicion = LatLng(ubicacion.latitude, ubicacion.longitude)
+                        val miPosicion = LatLng(ubicacion.latitude, ubicacion.longitude)
                         //marcado para texto descriptivo
-                        mMap.addMarker(MarkerOptions().position(miposicion).title("Aqui estoy prros!!"))
+                        mMap.addMarker(MarkerOptions().position(miPosicion).title("Aqui estoy prros!!"))
                         //camara
-                        mMap.moveCamera(CameraUpdateFactory.newLatLng(miposicion))
+                        mMap.moveCamera(CameraUpdateFactory.newLatLng(miPosicion))
                     }
                 }
             }
         }
     }
 
-    private fun InicializarLocationRequest(){
-        locationRequest= LocationRequest()
+    private fun solLocationRequest(){
+       /* locationRequest= LocationRequest()
         //intervalo de refresh de la ubicacion en milisegundos
         locationRequest?.interval=10000
         //la velocidad mas alta se puede alcanzar para esta misma actualizacion
@@ -88,7 +83,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         locationRequest?.fastestInterval=5000
         //Que tanta proximidad se requiere para que use la localizacion
         //PRIORITY_HIGH_ACCURACY da la proximidad mas detallada con 10 mets
-        locationRequest?.priority=LocationRequest.PRIORITY_HIGH_ACCURACY
+        locationRequest?.priority=LocationRequest.PRIORITY_HIGH_ACCURACY*/
+
+
+        locationRequest = LocationRequest()
+        locationRequest?.interval = 10000
+        locationRequest?.fastestInterval = 5000
+        locationRequest?.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
 
     /**
@@ -113,7 +114,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     //validacion de permisos o slicitarlos para usar la localizacion
 
-    private fun ValidarPermisosUbicacion():Boolean{
+    private fun validarPermisosUbicacion():Boolean{
         //se usa para comparar el permiso de lo que se quiere obtener contra lo que se encuentra en el manifesto
         //el metodo checkSelfPermision permite comparar un permiso para saber si esta habilitado o denegado
         val hayubicacionprecisa=
@@ -128,7 +129,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     @SuppressLint("MissingPermission")
     private fun obtenerubicacion(){
         //Mnitorea los cambios de ubicacion y los acgtualiza
-        fusedLocationClient?.removeLocationUpdates(locationRequest, locationCallback,null)
+        fusedLocationClient?.requestLocationUpdates(locationRequest,callback,null)
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -141,14 +142,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         val proveerContexto=
             ActivityCompat.shouldShowRequestPermissionRationale(this,permissionCoarseLocation)
         if (proveerContexto){
-            solicitudpermiso()
+            solicitudPermiso()
         }else{
-            solicitudpermiso()
+            solicitudPermiso()
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
-    private fun solicitudpermiso(){
+
+    private fun solicitudPermiso(){
         //Poner permisos de la actividad en forma de arreglo, junto con el codigo de reconocimiento
         //desencadena un trigger adicional mediante el metodo OnRequestPermissionResuñt
         requestPermissions(arrayOf(permissionFineLocation,permissionCoarseLocation),CODIGO_SOLICITUD_PERMISO)
@@ -177,46 +178,36 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             }
 
-        fun inicializarLocationRequest(){
-
         }
-        fun deteneractualizacionubicacion(){
+        private fun detenerActualizacionUbicacion(){
 
-            fusedLocationClient?.removeLocationUpdates(locationCallback)
+            fusedLocationClient?.removeLocationUpdates(callback)
         }
 
 
-
-        }
 
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onStart() {
         super.onStart()
 
         //se validan permisos de ubicacion si se tienen se inicia el metodo obtner
-        if(ValidarPermisosUbicacion()){
+        if(validarPermisosUbicacion()){
             obtenerubicacion()
         }else{
-            pedirPermisos()
+            solicitudPermiso()
         }
 
     }
 
+
+
     override fun onPause() {
         super.onPause()
-        deteneractualizacionubicacion()
+        detenerActualizacionUbicacion()
     }
-
-    private fun deteneractualizacionubicacion() {
-        fusedLocationClient?.removeLocationUpdates(locationCallback)
-    }
-
 
 }
 
-private fun FusedLocationProviderClient?.removeLocationUpdates(locationRequest: LocationRequest?, locationCallback: LocationCallback, nothing: Nothing?) {
-
-}
 
 
 
